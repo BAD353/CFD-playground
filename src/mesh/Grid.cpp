@@ -20,3 +20,11 @@ double Grid::dy() const {
 Vec2 Grid::cellCenter(int x, int y) const {
     return {(x + 0.5) * dx(), (y + 0.5) * dy()};
 }
+
+Vec2 Grid::cellHorizontalCenter(int x, int y) const {
+    return {x * dx(), (y + 0.5) * dy()};
+}
+
+Vec2 Grid::cellVerticalCenter(int x, int y) const {
+    return {(x + 0.5) * dx(), y * dy()};
+}

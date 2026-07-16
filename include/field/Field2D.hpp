@@ -11,6 +11,10 @@ template <typename T> class Field2D {
           m_data(grid.width() * grid.height()) {
     }
 
+    explicit Field2D(const int width, const int height)
+        : m_width(width), m_height(height), m_data(width * height) {
+    }
+
     T &operator()(int x, int y) {
         return m_data[index(x, y)];
     }
@@ -29,6 +33,14 @@ template <typename T> class Field2D {
 
     int height() const {
         return m_height;
+    }
+
+    T max() const {
+        return *std::max_element(m_data.begin(),m_data.end());
+    }
+
+    T min() const {
+        return *std::min_element(m_data.begin(),m_data.end());
     }
 
   private:

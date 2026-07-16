@@ -4,26 +4,40 @@
 using namespace std;
 
 Simulation::Simulation(const Grid &grid)
-    : m_grid(grid), m_velocity(m_grid), m_nextVelocity(m_grid), m_velocity0(m_grid), m_alpha(0.1),
-      m_divergence(m_grid), m_pressure(m_grid), m_nextPressure(m_grid), m_dye(m_grid), m_nextDye(m_grid) {
-    m_velocity.fill(Vec2{0.0, 0.0});
-    m_nextVelocity.fill(Vec2{0.0, 0.0});
+    : m_grid(grid), m_horizontalVelocity0(grid.width() + 1, grid.height()), m_horizontalVelocity(grid.width() + 1, grid.height()),
+      m_nextHorizontalVelocity(grid.width() + 1, grid.height()), m_verticalVelocity0(grid.width(), grid.height() + 1),
+      m_verticalVelocity(grid.width(), grid.height() + 1), m_nextVerticalVelocity(grid.width(), grid.height() + 1),
+      m_pressure(grid), m_nextPressure(grid), m_divergence(grid), m_dye(grid), m_nextDye(grid), m_cellType(grid) {
+    m_horizontalVelocity.fill(0.0);
+    m_nextHorizontalVelocity.fill(0.0);
+    m_verticalVelocity.fill(0.0);
+    m_nextVerticalVelocity.fill(0.0);
     m_dye.fill(0.0);
     m_nextDye.fill(0.0);
 }
 
 void Simulation::initializeVelocity() {
-    for (int y = 0; y < m_velocity.height(); y++) {
-        for (int x = 0; x < m_velocity.width(); x++) {
-            m_velocity(x, y) = {0, 0};
+    for (int y = 0; y < m_horizontalVelocity.height(); y++) {
+        for (int x = 0; x < m_horizontalVelocity.width(); x++) {
+            m_horizontalVelocity(x, y) = 3.0;
+        }
+    }
+    for (int y = 0; y < m_verticalVelocity.height(); y++) {
+        for (int x = 0; x < m_verticalVelocity.width(); x++) {
+            m_verticalVelocity(x, y) = 0.0;
         }
     }
 }
 
 void Simulation::initNextVelocity() {
-    for (int y = 0; y < m_velocity.height(); y++) {
-        for (int x = 0; x < m_velocity.width(); x++) {
-            m_nextVelocity(x, y) = m_velocity(x, y);
+    for (int y = 0; y < m_horizontalVelocity.height(); y++) {
+        for (int x = 0; x < m_horizontalVelocity.width(); x++) {
+            m_nextHorizontalVelocity(x, y) = m_horizontalVelocity(x, y);
+        }
+    }
+    for (int y = 0; y < m_verticalVelocity.height(); y++) {
+        for (int x = 0; x < m_verticalVelocity.width(); x++) {
+            m_nextVerticalVelocity(x, y) = m_verticalVelocity(x, y);
         }
     }
 }
@@ -40,36 +54,36 @@ void Simulation::initNextPressure() {
     }
 }
 
-Field2D<Vec2> const &Simulation::velocity() const {
-    return m_velocity;
+Field2D<double> const &Simulation::horizontalVelocity() const {
+    return m_horizontalVelocity;
 }
 
-Vec2 Simulation::sampleVelocity(double worldX, double worldY) const {
-    double gx = worldX / m_grid.dx() - 0.5;
+Field2D<double> const &Simulation::verticalVelocity() const {
+    return m_verticalVelocity;
+}
+
+double Simulation::sampleHorizontalVelocity(double worldX, double worldY) const {
+    double gx = worldX / m_grid.dx();
     double gy = worldY / m_grid.dy() - 0.5;
+    return sampleField(gx, gy, m_horizontalVelocity);
+}
 
-    gx = clamp(gx, 0.0, m_velocity.width() - 1.001);
-    gy = clamp(gy, 0.0, m_velocity.height() - 1.001);
-
-    int x0 = static_cast<int>(std::floor(gx));
-    int y0 = static_cast<int>(std::floor(gy));
-    int x1 = x0 + 1;
-    int y1 = y0 + 1;
-
-    double fx = gx - x0;
-    double fy = gy - y0;
-
-    return m_velocity(x0, y0) * (1 - fx) * (1 - fy) +
-           m_velocity(x1, y0) * fx * (1 - fy) +
-           m_velocity(x0, y1) * (1 - fx) * fy + m_velocity(x1, y1) * fx * fy;
+double Simulation::sampleVerticalVelocity(double worldX, double worldY) const {
+    double gx = worldX / m_grid.dx() - 0.5;
+    double gy = worldY / m_grid.dy();
+    return sampleField(gx, gy, m_verticalVelocity);
 }
 
 double Simulation::sampleDye(double worldX, double worldY) const {
     double gx = worldX / m_grid.dx() - 0.5;
     double gy = worldY / m_grid.dy() - 0.5;
+    return sampleField(gx, gy, m_dye);
+}
 
-    gx = clamp(gx, 0.0, m_dye.width() - 1.001);
-    gy = clamp(gy, 0.0, m_dye.height() - 1.001);
+double Simulation::sampleField(double gx, double gy, const Field2D<double> &field) const {
+
+    gx = clamp(gx, 0.0, field.width() - 1.001);
+    gy = clamp(gy, 0.0, field.height() - 1.001);
 
     int x0 = static_cast<int>(std::floor(gx));
     int y0 = static_cast<int>(std::floor(gy));
@@ -79,9 +93,8 @@ double Simulation::sampleDye(double worldX, double worldY) const {
     double fx = gx - x0;
     double fy = gy - y0;
 
-    return m_dye(x0, y0) * (1 - fx) * (1 - fy) +
-           m_dye(x1, y0) * fx * (1 - fy) +
-           m_dye(x0, y1) * (1 - fx) * fy + m_dye(x1, y1) * fx * fy;
+    return field(x0, y0) * (1 - fx) * (1 - fy) + field(x1, y0) * fx * (1 - fy) + field(x0, y1) * (1 - fx) * fy +
+           field(x1, y1) * fx * fy;
 }
 
 Field2D<double> const &Simulation::divergence() const {
@@ -96,22 +109,48 @@ Field2D<double> const &Simulation::pressure() const {
     return m_pressure;
 }
 
+Field2D<CellType> const &Simulation::cellType() const {
+    return m_cellType;
+}
+
+bool Simulation::isHorizontalFaceSolid(int x, int y) const {
+    if (x > 0 && m_cellType(x - 1, y) == CellType::Solid)
+        return true;
+    if (x < m_cellType.width() && m_cellType(x, y) == CellType::Solid)
+        return true;
+    return false;
+}
+
+bool Simulation::isVerticalFaceSolid(int x, int y) const {
+    if (y > 0 && m_cellType(x, y - 1) == CellType::Solid)
+        return true;
+    if (y < m_cellType.height() && m_cellType(x, y) == CellType::Solid)
+        return true;
+    return false;
+}
+
 void Simulation::update(double dt) {
     // applyGravityForce(dt);
-    m_velocity0 = m_velocity;
+    m_horizontalVelocity0 = m_horizontalVelocity;
+    m_verticalVelocity0 = m_verticalVelocity;
     for (int i = 0; i < 50; i++) {
+        m_nextHorizontalVelocity = m_horizontalVelocity;
+        m_nextVerticalVelocity = m_verticalVelocity;
         applyViscosityJacobiIteration(dt);
-        std::swap(m_nextVelocity, m_velocity);
+        std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
+        std::swap(m_nextVerticalVelocity, m_verticalVelocity);
         applyVelocityBoundary();
     }
 
     applyAdvection(dt);
-    std::swap(m_nextVelocity, m_velocity);
+    std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
+    std::swap(m_nextVerticalVelocity, m_verticalVelocity);
     initNextVelocity();
 
     applyVelocityBoundary();
 
     compute_divergence();
+    // cout << find_max_divergence() << endl;
 
     initZeroPressure();
     for (int i = 0; i < 50; i++) {
@@ -121,7 +160,8 @@ void Simulation::update(double dt) {
     }
 
     applyPressureGradient();
-    std::swap(m_nextVelocity, m_velocity);
+    std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
+    std::swap(m_nextVerticalVelocity, m_verticalVelocity);
     initNextVelocity();
 
     applyVelocityBoundary();

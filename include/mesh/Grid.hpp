@@ -12,6 +12,8 @@ class Grid {
     double dy() const;
 
     Vec2 cellCenter(int x, int y) const;
+    Vec2 cellHorizontalCenter(int x, int y) const;
+    Vec2 cellVerticalCenter(int x, int y) const;
 
   private:
     int m_width;

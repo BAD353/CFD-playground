@@ -8,7 +8,7 @@ class VelocityRenderer {
   public:
     explicit VelocityRenderer(double cellSize);
 
-    void draw(sf::RenderWindow &window, const Field2D<Vec2> &field);
+    void draw(sf::RenderWindow &window, const Field2D<double> &horizontalField, const Field2D<double> &verticalField);
 
   private:
     double m_cellSize;

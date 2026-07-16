@@ -1,15 +1,20 @@
 #include <simulation/Simulation.hpp>
 
 void Simulation::applyPressureGradient() {
-    for (int y = 1; y < m_velocity.height() - 1; y++) {
-        for (int x = 1; x < m_velocity.width() - 1; x++) {
-            double dpdx =
-                (m_pressure(x + 1, y) - m_pressure(x - 1, y)) / (2 * m_grid.dx());
+    for (int y = 1; y < m_pressure.height(); y++) {
+        for (int x = 0; x < m_pressure.width(); x++) {
             double dpdy =
-                (m_pressure(x, y + 1) - m_pressure(x, y - 1)) / (2 * m_grid.dy());
+                (m_pressure(x, y) - m_pressure(x, y - 1)) / (m_grid.dy());
 
-            m_nextVelocity(x, y).x =  m_velocity(x, y).x - dpdx;
-            m_nextVelocity(x, y).y =  m_velocity(x, y).y - dpdy;
+            m_nextVerticalVelocity(x, y) =  m_verticalVelocity(x, y) - dpdy;
+        }
+    }
+    for (int y = 0; y < m_pressure.height(); y++) {
+        for (int x = 1; x < m_pressure.width(); x++) {
+            double dpdx =
+                (m_pressure(x, y) - m_pressure(x - 1, y)) / (m_grid.dx());
+       
+            m_nextHorizontalVelocity(x, y) =  m_horizontalVelocity(x, y) - dpdx;
         }
     }
 }

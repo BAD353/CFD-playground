@@ -20,6 +20,7 @@ add_executable(CFDSolver
     src/simulation/applyPressureGradient.cpp
     src/simulation/applyBoundaries.cpp
     src/simulation/applyDye.cpp
+    src/simulation/updateCellType.cpp
 )
 
 target_include_directories(CFDSolver PRIVATE include)

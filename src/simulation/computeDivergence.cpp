@@ -1,17 +1,18 @@
 #include "simulation/Simulation.hpp"
 
 void Simulation::compute_divergence() {
-    Field2D<double> divergence(m_grid);
     double dx = m_grid.dx();
     double dy = m_grid.dy();
     for (int y = 1; y < m_grid.height() - 1; y++) {
         for (int x = 1; x < m_grid.width() - 1; x++) {
-            divergence(x, y) =
-                (m_velocity(x + 1, y).x - m_velocity(x - 1, y).x) / (2 * dx) +
-                (m_velocity(x, y + 1).y - m_velocity(x, y - 1).y) / (2 * dy);
+            if (m_cellType(x, y) == CellType::Solid) {
+                m_divergence(x, y) = 0;
+                continue;
+            }
+            m_divergence(x, y) = (m_horizontalVelocity(x + 1, y) - m_horizontalVelocity(x, y)) / (dx) +
+                                 (m_verticalVelocity(x, y + 1) - m_verticalVelocity(x, y)) / (dy);
         }
     }
-    std::swap(m_divergence, divergence);
 }
 
 double Simulation::find_max_divergence() {
