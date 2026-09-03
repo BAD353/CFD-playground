@@ -4,6 +4,7 @@ project(CFDSolver)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 
 find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
 
@@ -21,6 +22,7 @@ add_executable(CFDSolver
     src/simulation/applyBoundaries.cpp
     src/simulation/applyDye.cpp
     src/simulation/updateCellType.cpp
+    src/airfoil/Airfoil.cpp
 )
 
 target_include_directories(CFDSolver PRIVATE include)

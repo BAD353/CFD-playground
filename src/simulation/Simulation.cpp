@@ -19,7 +19,7 @@ Simulation::Simulation(const Grid &grid)
 void Simulation::initializeVelocity() {
     for (int y = 0; y < m_horizontalVelocity.height(); y++) {
         for (int x = 0; x < m_horizontalVelocity.width(); x++) {
-            m_horizontalVelocity(x, y) = 3.0;
+            m_horizontalVelocity(x, y) = 10.0;
         }
     }
     for (int y = 0; y < m_verticalVelocity.height(); y++) {
@@ -150,7 +150,7 @@ void Simulation::update(double dt) {
     applyVelocityBoundary();
 
     compute_divergence();
-    // cout << find_max_divergence() << endl;
+    // cout << find_max_divergence() << endl;   
 
     initZeroPressure();
     for (int i = 0; i < 50; i++) {

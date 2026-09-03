@@ -16,3 +16,11 @@ void Simulation::updateCellType(Vec2 position, CellType cellType, double radius)
         }
     }
 }
+
+void Simulation::updateAllCells(const Field2D<CellType> &newCellTypes) {
+    for (int y = 0; y < m_cellType.height(); y++) {
+        for (int x = 0; x < m_cellType.width(); x++) {
+            m_cellType(x, y) = newCellTypes(x, y);
+        }
+    }
+}

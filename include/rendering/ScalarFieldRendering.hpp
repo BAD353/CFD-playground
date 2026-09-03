@@ -12,6 +12,8 @@ class ScalarFieldRenderer {
     void drawDivergence(sf::RenderWindow &window, const Field2D<double> &field);
     void drawDye(sf::RenderWindow &window, const Field2D<double> &field);
     void drawPressure(sf::RenderWindow &window, const Field2D<double> &field);
+    void drawVelocityMagnitude(sf::RenderWindow &window, const Field2D<double> &horizontalVelocity,
+                                                const Field2D<double> &verticalVelocity);
     void drawCellType(sf::RenderWindow &window, const Field2D<CellType> &field);
 
   private:

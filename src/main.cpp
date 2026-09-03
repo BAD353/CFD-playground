@@ -1,26 +1,49 @@
 #include <SFML/Graphics.hpp>
 
+#include "airfoil/Airfoil.hpp"
 #include "mesh/Grid.hpp"
 #include "rendering/ScalarFieldRendering.hpp"
 #include "rendering/VelocityRendering.hpp"
 #include "simulation/Simulation.hpp"
+
 #include <chrono>
 using namespace std;
 
-enum class RenderMode { NoneRendering, VelocityRendering, DivergenceRendering, PressureRendering, Count };
+enum class RenderMode {
+    NoneRendering,
+    VelocityRendering,
+    DivergenceRendering,
+    PressureRendering,
+    VelocityMagintudeRendering,
+    Count
+};
 
 enum class DrawingMode { VelocityDye, Obstacle, Count };
 
 int main() {
-    constexpr int gridWidth = 100;
-    constexpr int gridHeight = 100;
-    constexpr double cellSize = 10.0f;
-    constexpr double dt = 0.01;
+    constexpr int gridWidth = 400;
+    constexpr int gridHeight = 300;
+    constexpr double cellSize = 2.0f;
+    constexpr double dt = 0.02;
 
     Grid grid(gridWidth, gridHeight, 1.0, 1.0);
 
     Simulation simulation(grid);
     simulation.initializeVelocity();
+
+    double chordWidthRatio = 0.7;
+
+    Airfoil airfoil(0.02, 0.40, 0.12, gridWidth * chordWidthRatio, 0,
+                    {gridWidth / 2.0 - gridWidth * chordWidthRatio / 2, gridHeight / 2.0}, gridWidth, gridHeight);
+
+    simulation.updateAllCells(airfoil.mesh());
+    // int size = 20;
+    // for (int x = -size; x <= size; x++) {
+    //     int sz = size - abs(x);
+    //     for (int y = -sz; y <= sz; y++) {
+    //         simulation.updateCellType({gridWidth * 0.3 + x, gridHeight / 2.0 + y}, CellType::Solid, 1);
+    //     }
+    // }
 
     VelocityRenderer vectorRenderer(cellSize);
     ScalarFieldRenderer scalarRenderer(cellSize, gridWidth, gridHeight);
@@ -103,7 +126,7 @@ int main() {
             }
 
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Subtract)) {
-                if (!isRadiusDecreaseKeyPressed && radius > 0)
+                if (!isRadiusDecreaseKeyPressed && radius > 1)
                     radius--;
                 isRadiusDecreaseKeyPressed = true;
             } else {
@@ -143,6 +166,8 @@ int main() {
             scalarRenderer.drawDivergence(window, simulation.divergence());
         } else if (renderMode == RenderMode::PressureRendering) {
             scalarRenderer.drawPressure(window, simulation.pressure());
+        } else if (renderMode == RenderMode::VelocityMagintudeRendering) {
+            scalarRenderer.drawVelocityMagnitude(window, simulation.horizontalVelocity(), simulation.verticalVelocity());
         } else if (renderMode == RenderMode::NoneRendering) {
             // pass
         }
@@ -152,7 +177,7 @@ int main() {
 
         const auto final_time = chrono::high_resolution_clock::now();
         double total_time = chrono::duration<double>(final_time - initial_time).count();
-        if (frameCount == 0) {
+        if (frameCount % 10 == 0) {
             cout << "FPS: " << 1.0 / total_time << endl;
             double simulation_time = chrono::duration<double>(after_simulation - initial_time).count();
             double render_time = chrono::duration<double>(final_time - after_simulation).count();

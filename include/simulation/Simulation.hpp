@@ -34,8 +34,11 @@ class Simulation {
 
     void applyGravityForce(double dt);
     void applyMouseForce(Vec2 position, Vec2 force, double radius, double dt);
-    void updateCellType(Vec2 position, CellType cellType, double radius);
 
+    void updateCellType(Vec2 position, CellType cellType, double radius);
+    void updateAllCells(const Field2D<CellType> &newCellTypes);
+
+    
     void applyAdvection(double dt);
 
     void compute_divergence();
