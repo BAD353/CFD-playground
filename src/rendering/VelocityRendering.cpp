@@ -57,10 +57,11 @@ sf::Vector2f rotate30(const sf::Vector2f &v) {
 sf::Vector2f rotateMinus30(const sf::Vector2f &v) {
     return {v.x * COS30 + v.y * SIN30, -v.x * SIN30 + v.y * COS30};
 }
+} // namespace
 
 void drawArrow(sf::RenderWindow &window, sf::Vector2f center, sf::Vector2f direction, double lengthFraction) {
 
-    sf::Color arrowColor = hsvToRgb(lengthFraction * 360.0, 1.0, 1.0);
+    sf::Color arrowColor = hsvToRgb((1 - lengthFraction) * 240.0 , 1.0, 1.0);
     const float arrowScale = 0.5f;
     std::array line = {sf::Vertex(center - direction * 0.5f, arrowColor), sf::Vertex(center + direction * 0.5f, arrowColor)};
 
@@ -74,7 +75,6 @@ void drawArrow(sf::RenderWindow &window, sf::Vector2f center, sf::Vector2f direc
     window.draw(leftline.data(), leftline.size(), sf::PrimitiveType::Lines);
     window.draw(rightline.data(), rightline.size(), sf::PrimitiveType::Lines);
 }
-} // namespace
 
 VelocityRenderer::VelocityRenderer(double cellSize) : m_cellSize(cellSize) {
 }
@@ -82,22 +82,22 @@ VelocityRenderer::VelocityRenderer(double cellSize) : m_cellSize(cellSize) {
 void VelocityRenderer::draw(sf::RenderWindow &window, const Field2D<double> &horizontalField,
                             const Field2D<double> &verticalField) {
     const int step = 1;
-    const double arrow_max_length = m_cellSize * 0.8;
-    double max_velocity = 0.0;
-    for (int y = 0; y < horizontalField.height(); y += step) {
-        for (int x = 0; x < verticalField.width(); x += step) {
-            Vec2 velocity = {(horizontalField(x, y) + horizontalField(x + 1, y + 1)) / 2,
-                             (verticalField(x, y) + verticalField(x + 1, y + 1)) / 2};
-            max_velocity = std::max(max_velocity, velocity.length());
-        }
-    }
+    const double arrow_max_length = m_cellSize * step * 0.8;
+    double max_velocity = m_maxArrowVelocity;
+    // for (int y = 0; y < horizontalField.height(); y += step) {
+    //     for (int x = 0; x < verticalField.width(); x += step) {
+    //         Vec2 velocity = {(horizontalField(x, y) + horizontalField(x + 1, y + 1)) / 2,
+    //                          (verticalField(x, y) + verticalField(x + 1, y + 1)) / 2};
+    //         max_velocity = std::max(max_velocity, velocity.length());
+    //     }
+    // }
     for (int y = 0; y < horizontalField.height(); y += step) {
         for (int x = 0; x < verticalField.width(); x += step) {
             Vec2 velocity = {(horizontalField(x, y) + horizontalField(x + 1, y + 1)) / 2,
                              (verticalField(x, y) + verticalField(x + 1, y + 1)) / 2};
             sf::Vector2f center({x * m_cellSize + m_cellSize / 2, y * m_cellSize + m_cellSize / 2});
-            sf::Vector2f direction(std::clamp(velocity.x / m_maxArrowVelocity, (double)-1, (double)1) * arrow_max_length,
-                                   std::clamp(velocity.y / m_maxArrowVelocity, (double)-1, (double)1) * arrow_max_length);
+            sf::Vector2f direction(std::clamp(velocity.x / velocity.length(), (double)-1, (double)1) * arrow_max_length,
+                                   std::clamp(velocity.y / velocity.length(), (double)-1, (double)1) * arrow_max_length);
             drawArrow(window, center, direction, velocity.length() / max_velocity);
         }
     }

@@ -110,7 +110,11 @@ void Airfoil::createMesh() {
     int x1 = min(m_mesh.width() - 1, static_cast<int>(ceil(maxX)));
     int y0 = max(0, static_cast<int>(floor(minY)));
     int y1 = min(m_mesh.height() - 1, static_cast<int>(ceil(maxY)));
-
+    for (int y = 0; y < m_mesh.height(); y++) {
+        for (int x = 0; x < m_mesh.width(); x++) {
+            m_mesh(x, y) = CellType::Fluid;
+        }
+    }
     for (int y = y0; y <= y1; y++) {
         for (int x = x0; x <= x1; x++) {
             Vec2 p = {static_cast<double>(x) + 0.5, static_cast<double>(y) + 0.5};

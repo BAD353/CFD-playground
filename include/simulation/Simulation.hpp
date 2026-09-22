@@ -3,6 +3,7 @@
 #include "field/Field2D.hpp"
 #include "math/Vec2.hpp"
 #include "mesh/Grid.hpp"
+#include <functional>
 
 enum class CellType {
     Fluid, 
@@ -22,7 +23,7 @@ class Simulation {
     const Field2D<double> &pressure() const;
     const Field2D<CellType> &cellType() const;
 
-    double sampleField(double x, double y, const Field2D<double> &field) const;
+    double sampleField(double x, double y, const Field2D<double> &field, const std::function<bool(int,int)> &isSolid) const;
     double sampleHorizontalVelocity(double worldX, double worldY) const;
     double sampleVerticalVelocity(double worldX, double worldY) const;
     double sampleDye(double worldX, double worldY) const;
@@ -60,11 +61,18 @@ class Simulation {
     bool isHorizontalFaceSolid(int x, int y) const;
     bool isVerticalFaceSolid(int x, int y) const;
 
+    Vec2 computeForce() const;
+
+    bool isPositionSolid(Vec2 pos) const;
+
   private:
     Grid m_grid;
     double m_alpha;
 
-    const double viscosity = 5;
+    double m_dt = 0.0; // dt used, for force calculation
+
+    const double airDensity = 1.225; 
+    const double viscosity = 1.48e-5; // m^2/s, kinematic viscosity of air
     
     // Old velocity fields
     // Field2D<Vec2> m_velocity0;

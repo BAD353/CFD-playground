@@ -3,12 +3,16 @@
 void Simulation::applyVelocityBoundary() {
     for (int y = 0; y < m_horizontalVelocity.height(); y++) {
         m_horizontalVelocity(0, y) = 10.0;
+        m_horizontalVelocity(m_horizontalVelocity.width() - 1, y) =
+            m_horizontalVelocity(m_horizontalVelocity.width() - 2, y);
         // m_horizontalVelocity(m_horizon   talVelocity.width() - 1, y) = 3.0;
     }
 
     for (int x = 0; x < m_verticalVelocity.width(); x++) {
-        // m_verticalVelocity(x, 0) = 0.0;
-        // m_verticalVelocity(x, m_verticalVelocity.height() - 1) = 0.0;
+         m_verticalVelocity(x, 0) =
+            m_verticalVelocity(x, 1);
+        m_verticalVelocity(x, m_verticalVelocity.height() - 1) =
+            m_verticalVelocity(x, m_verticalVelocity.height() - 2);
     }
 
     for (int y = 0; y < m_horizontalVelocity.height(); y++) {

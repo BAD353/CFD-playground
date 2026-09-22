@@ -55,6 +55,7 @@ ScalarFieldRenderer::ScalarFieldRenderer(int cellSize, int width, int height)
 }
 
 void ScalarFieldRenderer::drawDivergence(sf::RenderWindow &window, const Field2D<double> &field) {
+    double maxAbsDivergence = max(abs(field.min()), abs(field.max()));
     for (int y = 0; y < field.height(); y++) {
         for (int x = 0; x < field.width(); x++) {
             double divergence = field(x, y);
@@ -64,14 +65,15 @@ void ScalarFieldRenderer::drawDivergence(sf::RenderWindow &window, const Field2D
             m_pixels[ind + 2] = 0;
             m_pixels[ind + 3] = 255;
             if (divergence > 0) {
-                double value = std::clamp(divergence, 0.0, 1.0) * 255.0;
+                double value = std::clamp(divergence, 0.0, 1.0*maxAbsDivergence) * 255.0;
                 m_pixels[ind + 0] = value;
             } else {
-                double value = std::clamp(-divergence, 0.0, 1.0) * 255.0;
+                double value = std::clamp(-divergence, 0.0, 1.0*maxAbsDivergence) * 255.0;
                 m_pixels[ind + 2] = value;
             }
         }
     }
+    cout << "Max abs divergence: " << maxAbsDivergence << endl;
     m_texture.update(m_pixels.data());
     window.draw(m_sprite);
 }

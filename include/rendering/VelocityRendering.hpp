@@ -12,5 +12,7 @@ class VelocityRenderer {
 
   private:
     double m_cellSize;
-    const double m_maxArrowVelocity = 5;
+    const double m_maxArrowVelocity = 15;
 };
+
+void drawArrow(sf::RenderWindow &window, sf::Vector2f center, sf::Vector2f direction, double lengthFraction);

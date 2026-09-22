@@ -21,20 +21,24 @@ enum class RenderMode {
 enum class DrawingMode { VelocityDye, Obstacle, Count };
 
 int main() {
-    constexpr int gridWidth = 400;
-    constexpr int gridHeight = 300;
-    constexpr double cellSize = 2.0f;
-    constexpr double dt = 0.02;
+    constexpr int gridWidth = 300;
+    constexpr int gridHeight = 150;
+    constexpr double cellSize = 4.0f; //in pixels
+    constexpr double dt = 0.001;
 
-    Grid grid(gridWidth, gridHeight, 1.0, 1.0);
+    Grid grid(gridWidth, gridHeight, 0.01, 0.01); // 1cm x 1cm cells
 
     Simulation simulation(grid);
     simulation.initializeVelocity();
 
-    double chordWidthRatio = 0.7;
+    double chordWidthRatio = 0.5;
 
-    Airfoil airfoil(0.02, 0.40, 0.12, gridWidth * chordWidthRatio, 0,
-                    {gridWidth / 2.0 - gridWidth * chordWidthRatio / 2, gridHeight / 2.0}, gridWidth, gridHeight);
+    double angleOfAttack = 0;
+    constexpr double airfoilCenterX = 0.4 * gridWidth;
+    constexpr double airfoilCenterY = 0.5 * gridHeight;
+
+    Airfoil airfoil(0.08, 0.28, 0.12, gridWidth * chordWidthRatio, angleOfAttack,
+                    {airfoilCenterX - gridWidth * chordWidthRatio / 2, airfoilCenterY}, gridWidth, gridHeight);
 
     simulation.updateAllCells(airfoil.mesh());
     // int size = 20;
@@ -68,6 +72,11 @@ int main() {
     int radius = 5.0;
     bool isRadiusIncreaseKeyPressed = false;
     bool isRadiusDecreaseKeyPressed = false;
+    bool isAoAIncreaseKeyPressed = false;
+    bool isAoADecreaseKeyPressed = false;
+
+    bool isPaused = false;
+    bool isPauseKeyPressed = false;
 
     while (window.isOpen()) {
         const auto initial_time = chrono::high_resolution_clock::now();
@@ -133,6 +142,29 @@ int main() {
                 isRadiusDecreaseKeyPressed = false;
             }
 
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
+                if (!isAoAIncreaseKeyPressed) {
+                    angleOfAttack++;
+                    airfoil.updateAngleOfAttack(angleOfAttack);
+                    simulation.updateAllCells(airfoil.mesh());
+                    cout << "Angle of Attack: " << angleOfAttack << endl;
+                }
+                isAoAIncreaseKeyPressed = true;
+            } else {
+                isAoAIncreaseKeyPressed = false;
+            }
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
+                if (!isAoADecreaseKeyPressed) {
+                    angleOfAttack--;
+                    airfoil.updateAngleOfAttack(angleOfAttack);
+                    simulation.updateAllCells(airfoil.mesh());
+                }
+                isAoADecreaseKeyPressed = true;
+            } else {
+                isAoADecreaseKeyPressed = false;
+            }
+
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::V)) {
                 if (!isRenderModeKeyPressed) {
                     renderMode =
@@ -152,8 +184,19 @@ int main() {
             } else {
                 isDrawingModeKeyPressed = false;
             }
+
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::P)) {
+                if (!isPauseKeyPressed) {
+                    isPaused = !isPaused;
+                }
+                isPauseKeyPressed = true;
+            } else {
+                isPauseKeyPressed = false;
+            }
         }
-        simulation.update(dt);
+        if (!isPaused) {
+            simulation.update(dt);
+        }
         const auto after_simulation = chrono::high_resolution_clock::now();
 
         step_count++;
@@ -173,16 +216,30 @@ int main() {
         }
         scalarRenderer.drawDye(window, simulation.dye());
         scalarRenderer.drawCellType(window, simulation.cellType());
+
+        Vec2 force = simulation.computeForce();
+        double forceAngle = abs(atan2(force.y, force.x)) * 180.0 / M_PI - angleOfAttack;
+        double lift = force.y * cos(forceAngle * M_PI / 180.0) - force.x * sin(forceAngle * M_PI / 180.0);
+        double drag = force.y * sin(forceAngle * M_PI / 180.0) + force.x * cos(forceAngle * M_PI / 180.0);
+
+        drawArrow(window, {gridWidth * cellSize / 2, gridHeight * cellSize / 2}, {force.x, force.y}, 1.0);
+
         window.display();
 
         const auto final_time = chrono::high_resolution_clock::now();
         double total_time = chrono::duration<double>(final_time - initial_time).count();
-        if (frameCount % 10 == 0) {
+        if (!isPaused && frameCount % 10 == 0) {
             cout << "FPS: " << 1.0 / total_time << endl;
             double simulation_time = chrono::duration<double>(after_simulation - initial_time).count();
             double render_time = chrono::duration<double>(final_time - after_simulation).count();
             cout << "Simulation time: " << simulation_time / total_time * 100 << "% of total time" << endl;
             cout << "Render time: " << render_time / total_time * 100 << "% of total time" << endl;
+
+            cout << "Force: " << force << endl;
+            cout << "Force: " << forceAngle << endl;
+            cout << "Lift: " << lift << endl;
+            cout << "Drag: " << drag << endl;
+            cout << "Lift/Drag ratio: " << lift / drag << endl;
         }
         frameCount++;
     }

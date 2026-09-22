@@ -65,22 +65,30 @@ Field2D<double> const &Simulation::verticalVelocity() const {
 double Simulation::sampleHorizontalVelocity(double worldX, double worldY) const {
     double gx = worldX / m_grid.dx();
     double gy = worldY / m_grid.dy() - 0.5;
-    return sampleField(gx, gy, m_horizontalVelocity);
+    return sampleField(gx, gy, m_horizontalVelocity, [this](int x, int y) { return isHorizontalFaceSolid(x, y); });
 }
 
 double Simulation::sampleVerticalVelocity(double worldX, double worldY) const {
     double gx = worldX / m_grid.dx() - 0.5;
     double gy = worldY / m_grid.dy();
-    return sampleField(gx, gy, m_verticalVelocity);
+    return sampleField(gx, gy, m_verticalVelocity, [this](int x, int y) { return isVerticalFaceSolid(x, y); });
 }
 
 double Simulation::sampleDye(double worldX, double worldY) const {
     double gx = worldX / m_grid.dx() - 0.5;
     double gy = worldY / m_grid.dy() - 0.5;
-    return sampleField(gx, gy, m_dye);
+    return sampleField(gx, gy, m_dye, [this](int x, int y) { return m_cellType(x, y) == CellType::Solid; });
 }
 
-double Simulation::sampleField(double gx, double gy, const Field2D<double> &field) const {
+bool Simulation::isPositionSolid(Vec2 pos) const {
+    int cx = static_cast<int>(std::floor(pos.x / m_grid.dx()));
+    int cy = static_cast<int>(std::floor(pos.y / m_grid.dy()));
+    cx = std::clamp(cx, 0, m_cellType.width() - 1);
+    cy = std::clamp(cy, 0, m_cellType.height() - 1);
+    return m_cellType(cx, cy) == CellType::Solid;
+}
+
+double Simulation::sampleField(double gx, double gy, const Field2D<double> &field, const std::function<bool(int,int)> &isSolid) const {
 
     gx = clamp(gx, 0.0, field.width() - 1.001);
     gy = clamp(gy, 0.0, field.height() - 1.001);
@@ -93,8 +101,18 @@ double Simulation::sampleField(double gx, double gy, const Field2D<double> &fiel
     double fx = gx - x0;
     double fy = gy - y0;
 
-    return field(x0, y0) * (1 - fx) * (1 - fy) + field(x1, y0) * fx * (1 - fy) + field(x0, y1) * (1 - fx) * fy +
-           field(x1, y1) * fx * fy;
+    double w00 = (1 - fx) * (1 - fy);
+    double w10 = fx * (1 - fy);
+    double w01 = (1 - fx) * fy;
+    double w11 = fx * fy;
+
+    if (isSolid(x0, y0)) w00 = 0;
+    if (isSolid(x1, y0)) w10 = 0;
+    if (isSolid(x0, y1)) w01 = 0;
+    if (isSolid(x1, y1)) w11 = 0;
+
+    //Note: divide by total to renormalize
+    return (w00 * field(x0, y0) + w10 * field(x1, y0) + w01 * field(x0, y1) + w11 * field(x1, y1)) / (w00 + w10 + w01 + w11);
 }
 
 Field2D<double> const &Simulation::divergence() const {
@@ -130,10 +148,11 @@ bool Simulation::isVerticalFaceSolid(int x, int y) const {
 }
 
 void Simulation::update(double dt) {
+    m_dt = dt;
     // applyGravityForce(dt);
     m_horizontalVelocity0 = m_horizontalVelocity;
     m_verticalVelocity0 = m_verticalVelocity;
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 500; i++) {
         m_nextHorizontalVelocity = m_horizontalVelocity;
         m_nextVerticalVelocity = m_verticalVelocity;
         applyViscosityJacobiIteration(dt);
@@ -150,10 +169,10 @@ void Simulation::update(double dt) {
     applyVelocityBoundary();
 
     compute_divergence();
-    // cout << find_max_divergence() << endl;   
+    // cout << "before: " << find_max_divergence() << endl;   
 
     initZeroPressure();
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 1500; i++) {
         applyPressureJacobiIteration();
         std::swap(m_nextPressure, m_pressure);
         applyPressureBoundary();
@@ -166,6 +185,44 @@ void Simulation::update(double dt) {
 
     applyVelocityBoundary();
 
+    
+    compute_divergence();
+    // cout << "after: " << find_max_divergence() << endl;   
+
     applyDyeAdvection(dt);
     std::swap(m_dye, m_nextDye);
+}
+
+Vec2 Simulation::computeForce() const {
+    Vec2 totalForce(0.0, 0.0);
+
+    for (int y = 1; y < m_cellType.height() - 1; y++) {
+        for (int x = 1; x < m_cellType.width() - 1; x++) {
+
+            if (m_cellType(x, y) != CellType::Solid)
+                continue;
+
+            if (m_cellType(x - 1, y) != CellType::Solid) {
+                double p = m_pressure(x - 1, y);
+                totalForce.x += p * m_grid.dy();
+            }
+
+            if (m_cellType(x + 1, y) != CellType::Solid) {
+                double p = m_pressure(x + 1, y);
+                totalForce.x -= p * m_grid.dy();
+            }
+
+            if (m_cellType(x, y - 1) != CellType::Solid) {
+                double p = m_pressure(x, y - 1);
+                totalForce.y += p * m_grid.dx();
+            }
+
+            if (m_cellType(x, y + 1) != CellType::Solid) {
+                double p = m_pressure(x, y + 1);
+                totalForce.y -= p * m_grid.dx();
+            }
+        }
+    }
+
+    return totalForce * airDensity / m_dt;
 }

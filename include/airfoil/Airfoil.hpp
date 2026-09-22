@@ -14,6 +14,12 @@ public:
     void createWorldPolygon();
     void createMesh();
 
+    void updateAngleOfAttack(double angle) {
+        m_angleOfAttack = angle;
+        createWorldPolygon();
+        createMesh();
+    }
+
 private:
     double m_maxCamber;
     double m_maxCamberPosition;
