@@ -1,7 +1,6 @@
 #include <cmath>
 #include <field/Field2D.hpp>
 #include <simulation/Simulation.hpp>
-#include <cuda/main.cuh>
 using namespace std;
 
 Simulation::Simulation(const Grid &grid)
@@ -173,31 +172,11 @@ void Simulation::update(double dt) {
     // cout << "before: " << find_max_divergence() << endl;   
 
     initZeroPressure();
-    
-    const int w = m_grid.width();
-    const int h = m_grid.height();
-
-    vector<uint8_t> solid(w * h);
-    for (int y = 0; y < h; y++)
-    for (int x = 0; x < w; x++)
-        solid[y * w + x] = (m_cellType(x, y) == CellType::Solid);
-
-    Field2D<double> cuda_pressure = m_pressure;
-
-    runJacobiPressureSolve(m_grid.width(), m_grid.height(), cuda_pressure.data(), m_divergence.data(), solid.data(), 1500, m_grid.dx());
-
     for (int i = 0; i < 1500; i++) {
         applyPressureJacobiIteration();
         std::swap(m_nextPressure, m_pressure);
         applyPressureBoundary();
     }
-    double error = 0;
-    for (int i = 0; i < m_pressure.width(); i++) {
-        for (int j = 0; j < m_pressure.height(); j++) {
-            error = max(error,abs(m_pressure(i,j) - cuda_pressure(i,j)));
-        }
-    }
-    cout << "CUDA Error: " << error << endl;
 
     applyPressureGradient();
     std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
