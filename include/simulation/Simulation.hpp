@@ -14,7 +14,7 @@ class Simulation {
   public:
     Simulation(const Grid &grid);
 
-    void update(double dt);
+    void update(double dt, bool printDebug);
 
     const Field2D<double> &horizontalVelocity() const;
     const Field2D<double> &verticalVelocity() const;

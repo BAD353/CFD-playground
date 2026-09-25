@@ -21,9 +21,9 @@ enum class RenderMode {
 enum class DrawingMode { VelocityDye, Obstacle, Count };
 
 int main() {
-    constexpr int gridWidth = 300;
-    constexpr int gridHeight = 150;
-    constexpr double cellSize = 4.0f; //in pixels
+    constexpr int gridWidth = 600;
+    constexpr int gridHeight = 300;
+    constexpr double cellSize = 2.0f; //in pixels
     constexpr double dt = 0.001;
 
     Grid grid(gridWidth, gridHeight, 0.01, 0.01); // 1cm x 1cm cells
@@ -37,7 +37,7 @@ int main() {
     constexpr double airfoilCenterX = 0.4 * gridWidth;
     constexpr double airfoilCenterY = 0.5 * gridHeight;
 
-    Airfoil airfoil(0.08, 0.28, 0.12, gridWidth * chordWidthRatio, angleOfAttack,
+    Airfoil airfoil(0.02, 0.20, 0.12, gridWidth * chordWidthRatio, angleOfAttack,
                     {airfoilCenterX - gridWidth * chordWidthRatio / 2, airfoilCenterY}, gridWidth, gridHeight);
 
     simulation.updateAllCells(airfoil.mesh());
@@ -195,7 +195,7 @@ int main() {
             }
         }
         if (!isPaused) {
-            simulation.update(dt);
+            simulation.update(dt, frameCount % 10 == 0);
         }
         const auto after_simulation = chrono::high_resolution_clock::now();
 

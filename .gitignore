@@ -1,2 +1,6 @@
 .vscode
 build
+report.sqlite
+*.nsys-rep
+*.ncu-rep
+build-debug

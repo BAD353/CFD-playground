@@ -1,6 +1,9 @@
 #include <cmath>
 #include <field/Field2D.hpp>
 #include <simulation/Simulation.hpp>
+#include <cuda/main.cuh>
+#include <cstdint>
+#include <chrono>
 using namespace std;
 
 Simulation::Simulation(const Grid &grid)
@@ -147,24 +150,32 @@ bool Simulation::isVerticalFaceSolid(int x, int y) const {
     return false;
 }
 
-void Simulation::update(double dt) {
+void Simulation::update(double dt, bool printDebug) {
+    const auto initial = chrono::high_resolution_clock::now();
     m_dt = dt;
     // applyGravityForce(dt);
     m_horizontalVelocity0 = m_horizontalVelocity;
     m_verticalVelocity0 = m_verticalVelocity;
-    for (int i = 0; i < 500; i++) {
-        m_nextHorizontalVelocity = m_horizontalVelocity;
-        m_nextVerticalVelocity = m_verticalVelocity;
-        applyViscosityJacobiIteration(dt);
-        std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
-        std::swap(m_nextVerticalVelocity, m_verticalVelocity);
-        applyVelocityBoundary();
+    m_nextHorizontalVelocity = m_horizontalVelocity;
+    m_nextVerticalVelocity = m_verticalVelocity;
+
+    for (int i = 0; i < 2; i++) {
+       m_nextHorizontalVelocity = m_horizontalVelocity;
+       m_nextVerticalVelocity = m_verticalVelocity;
+       applyViscosityJacobiIteration(dt);
+       std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
+       std::swap(m_nextVerticalVelocity, m_verticalVelocity);
+       applyVelocityBoundary();
     }
+    const auto after_viscosity = chrono::high_resolution_clock::now();
 
     applyAdvection(dt);
     std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
     std::swap(m_nextVerticalVelocity, m_verticalVelocity);
     initNextVelocity();
+
+    const auto after_advection = chrono::high_resolution_clock::now();
+
 
     applyVelocityBoundary();
 
@@ -172,11 +183,35 @@ void Simulation::update(double dt) {
     // cout << "before: " << find_max_divergence() << endl;   
 
     initZeroPressure();
-    for (int i = 0; i < 1500; i++) {
-        applyPressureJacobiIteration();
-        std::swap(m_nextPressure, m_pressure);
-        applyPressureBoundary();
-    }
+    
+    const int w = m_grid.width();
+    const int h = m_grid.height();
+
+    vector<uint8_t> solid(w * h);
+    for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++)
+        solid[y * w + x] = (m_cellType(x, y) == CellType::Solid);
+
+    Field2D<double> cuda_pressure = m_pressure;
+
+    const auto before_cuda_pressure = chrono::high_resolution_clock::now();
+
+    runJacobiPressureSolve(m_grid.width(), m_grid.height(), m_pressure.data(), m_divergence.data(), solid.data(), 1500, m_grid.dx());
+
+    const auto after_cuda_pressure = chrono::high_resolution_clock::now();
+
+//    for (int i = 0; i < 1500; i++) {
+//        applyPressureJacobiIteration();
+//        std::swap(m_nextPressure, m_pressure);
+//        applyPressureBoundary();
+//    }
+//    double error = 0;
+//    for (int i = 0; i < m_pressure.width(); i++) {
+//        for (int j = 0; j < m_pressure.height(); j++) {
+//            error = max(error,abs(m_pressure(i,j) - cuda_pressure(i,j)));
+//        }
+//    }
+//    cout << "CUDA Error: " << error << endl;
 
     applyPressureGradient();
     std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
@@ -185,12 +220,21 @@ void Simulation::update(double dt) {
 
     applyVelocityBoundary();
 
-    
+    const auto after_pressure = chrono::high_resolution_clock::now();
     compute_divergence();
     // cout << "after: " << find_max_divergence() << endl;   
 
     applyDyeAdvection(dt);
     std::swap(m_dye, m_nextDye);
+    const auto after_dye = chrono::high_resolution_clock::now();
+
+    if (printDebug) {
+        cout << "Viscosity: " << chrono::duration_cast<chrono::milliseconds>(after_viscosity - initial).count() << " ms, "
+             << "Advection: " << chrono::duration_cast<chrono::milliseconds>(after_advection - after_viscosity).count() << " ms, "
+             << "Pressure: " << chrono::duration_cast<chrono::milliseconds>(after_pressure - after_advection).count() << " ms, "
+             << "Dye: " << chrono::duration_cast<chrono::milliseconds>(after_dye - after_pressure).count() << " ms,"
+             << "CUDA Pressure: " << chrono::duration_cast<chrono::milliseconds>(after_cuda_pressure - before_cuda_pressure).count() << " ms" << endl;
+    }
 }
 
 Vec2 Simulation::computeForce() const {

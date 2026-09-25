@@ -1,13 +1,22 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.24)
 
-project(CFDSolver)
+set(CMAKE_CUDA_ARCHITECTURES native)
+project(CFDSolver LANGUAGES CXX CUDA)
+
+set(SFML_STATIC_LIBRARIES TRUE)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 20)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 
 find_package(SFML 3 REQUIRED COMPONENTS Graphics Window System)
-
 add_executable(CFDSolver
     src/main.cpp
     src/mesh/Grid.cpp
@@ -23,9 +32,13 @@ add_executable(CFDSolver
     src/simulation/applyDye.cpp
     src/simulation/updateCellType.cpp
     src/airfoil/Airfoil.cpp
+    src/cuda/jacobiPressureSolve/runJacobiPressureSolve.cu
+    src/cuda/jacobiPressureSolve/applyPressureJacobiIteration.cu
+    src/cuda/jacobiPressureSolve/applyPressureBoundaries.cu
 )
 
 target_include_directories(CFDSolver PRIVATE include)
+target_compile_options(CFDSolver PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
 
 target_link_libraries(CFDSolver PRIVATE
     SFML::Graphics
