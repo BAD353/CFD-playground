@@ -159,6 +159,15 @@ void Simulation::update(double dt, bool printDebug) {
     m_nextHorizontalVelocity = m_horizontalVelocity;
     m_nextVerticalVelocity = m_verticalVelocity;
 
+    const int w = m_grid.width();
+    const int h = m_grid.height();
+
+    vector<uint8_t> solid(w * h);
+    for (int y = 0; y < h; y++)
+    for (int x = 0; x < w; x++)
+        solid[y * w + x] = (m_cellType(x, y) == CellType::Solid);
+
+    // THIS IS ESSENTIALLY COMMENTED OUT FOR NOW (RUNS ONLY TWICE)
     for (int i = 0; i < 2; i++) {
        m_nextHorizontalVelocity = m_horizontalVelocity;
        m_nextVerticalVelocity = m_verticalVelocity;
@@ -167,11 +176,36 @@ void Simulation::update(double dt, bool printDebug) {
        std::swap(m_nextVerticalVelocity, m_verticalVelocity);
        applyVelocityBoundary();
     }
+    // END OF COMMENTED OUT SECTION
+
     const auto after_viscosity = chrono::high_resolution_clock::now();
 
-    applyAdvection(dt);
+    // Field2D<double> cuda_nextHorizontalVelocity = m_nextHorizontalVelocity;
+    // Field2D<double> cuda_nextVerticalVelocity = m_nextVerticalVelocity;
+
+    runVelocityAdvection(m_grid.width(), m_grid.height(), m_horizontalVelocity.data(), m_verticalVelocity.data(), 
+    m_nextHorizontalVelocity.data(), m_nextVerticalVelocity.data(), solid.data(), m_grid.dx(), m_grid.dy(), dt);
+
+    // applyAdvection(dt);
     std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
     std::swap(m_nextVerticalVelocity, m_verticalVelocity);
+
+    // double error = 0;
+    // for (int i = 0; i < m_horizontalVelocity.width(); i++) {
+    //     for (int j = 0; j < m_horizontalVelocity.height(); j++) {
+    //         error = max(error,abs(m_horizontalVelocity(i,j) - cuda_nextHorizontalVelocity(i,j)));
+    //     }
+    // }
+    // cout << "CUDA Horizontal Advection Error: " << error << endl;
+
+    // error = 0;
+    // for (int i = 0; i < m_verticalVelocity.width(); i++) {
+    //     for (int j = 0; j < m_verticalVelocity.height(); j++) {
+    //         error = max(error,abs(m_verticalVelocity(i,j) - cuda_nextVerticalVelocity(i,j)));
+    //     }
+    // }
+    // cout << "CUDA Vertical Advection Error: " << error << endl;
+
     initNextVelocity();
 
     const auto after_advection = chrono::high_resolution_clock::now();
@@ -184,14 +218,6 @@ void Simulation::update(double dt, bool printDebug) {
 
     initZeroPressure();
     
-    const int w = m_grid.width();
-    const int h = m_grid.height();
-
-    vector<uint8_t> solid(w * h);
-    for (int y = 0; y < h; y++)
-    for (int x = 0; x < w; x++)
-        solid[y * w + x] = (m_cellType(x, y) == CellType::Solid);
-
     Field2D<double> cuda_pressure = m_pressure;
 
     const auto before_cuda_pressure = chrono::high_resolution_clock::now();
@@ -229,7 +255,8 @@ void Simulation::update(double dt, bool printDebug) {
     const auto after_dye = chrono::high_resolution_clock::now();
 
     if (printDebug) {
-        cout << "Viscosity: " << chrono::duration_cast<chrono::milliseconds>(after_viscosity - initial).count() << " ms, "
+        cout << "Total: " << chrono::duration_cast<chrono::milliseconds>(after_dye - initial).count() << " ms, " 
+             << "Viscosity: " << chrono::duration_cast<chrono::milliseconds>(after_viscosity - initial).count() << " ms, "
              << "Advection: " << chrono::duration_cast<chrono::milliseconds>(after_advection - after_viscosity).count() << " ms, "
              << "Pressure: " << chrono::duration_cast<chrono::milliseconds>(after_pressure - after_advection).count() << " ms, "
              << "Dye: " << chrono::duration_cast<chrono::milliseconds>(after_dye - after_pressure).count() << " ms,"

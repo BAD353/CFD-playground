@@ -35,6 +35,8 @@ add_executable(CFDSolver
     src/cuda/jacobiPressureSolve/runJacobiPressureSolve.cu
     src/cuda/jacobiPressureSolve/applyPressureJacobiIteration.cu
     src/cuda/jacobiPressureSolve/applyPressureBoundaries.cu
+    src/cuda/velocityAdvection/applyVelocityAdvection.cu
+    src/cuda/velocityAdvection/runVelocityAdvection.cu
 )
 
 target_include_directories(CFDSolver PRIVATE include)
