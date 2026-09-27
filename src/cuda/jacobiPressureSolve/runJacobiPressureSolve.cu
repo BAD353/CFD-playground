@@ -3,22 +3,22 @@
 #include <cstdint>
 #include <cstdio>
 
-void runJacobiPressureSolve(int n, int m, double *pressure, double *divergence, uint8_t *isSolid, int iterations, double dx) {
+void runJacobiPressureSolve(int n, int m, float *pressure, float *divergence, uint8_t *isSolid, int iterations, float dx) {
     int gridSize = n * m;
-    double *cuda_pressure, *cuda_nextPressure, *cuda_divergence;
+    float *cuda_pressure, *cuda_nextPressure, *cuda_divergence;
     uint8_t *cuda_isSolid;
-    cudaMalloc(&cuda_pressure, gridSize * sizeof(double));
-    cudaMalloc(&cuda_nextPressure, gridSize * sizeof(double));
-    cudaMalloc(&cuda_divergence, gridSize * sizeof(double));
+    cudaMalloc(&cuda_pressure, gridSize * sizeof(float));
+    cudaMalloc(&cuda_nextPressure, gridSize * sizeof(float));
+    cudaMalloc(&cuda_divergence, gridSize * sizeof(float));
     cudaMalloc(&cuda_isSolid, gridSize * sizeof(uint8_t));
 
-    double *cuda_inverseNeighbourCount, *cuda_divergenceTerm;
-    cudaMalloc(&cuda_inverseNeighbourCount, gridSize * sizeof(double));
-    cudaMalloc(&cuda_divergenceTerm, gridSize * sizeof(double));
+    float *cuda_inverseNeighbourCount, *cuda_divergenceTerm;
+    cudaMalloc(&cuda_inverseNeighbourCount, gridSize * sizeof(float));
+    cudaMalloc(&cuda_divergenceTerm, gridSize * sizeof(float));
 
-    cudaMemcpy(cuda_pressure, pressure, gridSize * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_nextPressure, pressure, gridSize * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_divergence, divergence, gridSize * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_pressure, pressure, gridSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_nextPressure, pressure, gridSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_divergence, divergence, gridSize * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_isSolid, isSolid, gridSize * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
     dim3 block(32,8);
@@ -34,7 +34,7 @@ void runJacobiPressureSolve(int n, int m, double *pressure, double *divergence, 
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy(pressure, cuda_pressure, gridSize * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(pressure, cuda_pressure, gridSize * sizeof(float), cudaMemcpyDeviceToHost);
 
 
     cudaFree(cuda_pressure);

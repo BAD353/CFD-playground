@@ -47,6 +47,10 @@ template <typename T> class Field2D {
         return m_data.data();
     } 
 
+    const T *data() const {
+        return m_data.data();
+    }
+
   private:
     size_t index(int x, int y) const {
         return static_cast<size_t>(y) * m_width + x;

@@ -4,17 +4,17 @@
 #include <cstdio>
 const int STEP_COUNT = 10;
 
-__device__ double clampDouble(double x, double a, double b) {
+__device__ float clampfloat(float x, float a, float b) {
     if (x < a) return a;
     if (b < x) return b;
     return x;
 }
 
-__device__ bool isPositionSolid(int n, int m, double gx, double gy, double dx, double dy, uint8_t *isSolid) {
+__device__ bool isPositionSolid(int n, int m, float gx, float gy, float dx, float dy, uint8_t *isSolid) {
     int cx = static_cast<int>(std::floor(gx / dx));
     int cy = static_cast<int>(std::floor(gy / dy));
-    cx = clampDouble(cx, 0, n - 1);
-    cy = clampDouble(cy, 0, m - 1);
+    cx = clampfloat(cx, 0, n - 1);
+    cy = clampfloat(cy, 0, m - 1);
     return isSolid[cy * n + cx];
 }
 
@@ -34,26 +34,26 @@ __device__ bool isVerticalFaceSolid(int n, int m, int x, int y, uint8_t *isSolid
     return false;
 }
 
-__device__ double sampleHorizontalVelocity(int n, int m, double worldX, double worldY, double dx, double dy, double *field,
+__device__ float sampleHorizontalVelocity(int n, int m, float worldX, float worldY, float dx, float dy, float *field,
                                            uint8_t *isSolid) {
-    double gx = worldX / dx;
-    double gy = worldY / dy - 0.5;
+    float gx = worldX / dx;
+    float gy = worldY / dy - 0.5f;
 
-    gx = clampDouble(gx, 0.0, (n + 1) - 1.001);
-    gy = clampDouble(gy, 0.0, m - 1.001);
+    gx = clampfloat(gx, 0.0f, (n + 1) - 1.001f);
+    gy = clampfloat(gy, 0.0f, m - 1.001f);
 
     int x0 = static_cast<int>(std::floor(gx));
     int y0 = static_cast<int>(std::floor(gy));
     int x1 = x0 + 1;
     int y1 = y0 + 1;
 
-    double fx = gx - x0;
-    double fy = gy - y0;
+    float fx = gx - x0;
+    float fy = gy - y0;
 
-    double w00 = (1 - fx) * (1 - fy);
-    double w10 = fx * (1 - fy);
-    double w01 = (1 - fx) * fy;
-    double w11 = fx * fy;
+    float w00 = (1 - fx) * (1 - fy);
+    float w10 = fx * (1 - fy);
+    float w01 = (1 - fx) * fy;
+    float w11 = fx * fy;
 
     if (isHorizontalFaceSolid(n, m, x0, y0, isSolid))
         w00 = 0;
@@ -70,26 +70,26 @@ __device__ double sampleHorizontalVelocity(int n, int m, double worldX, double w
            (w00 + w10 + w01 + w11);
 }
 
-__device__ double sampleVerticalVelocity(int n, int m, double worldX, double worldY, double dx, double dy, double *field,
+__device__ float sampleVerticalVelocity(int n, int m, float worldX, float worldY, float dx, float dy, float *field,
                                            uint8_t *isSolid) {
-    double gx = worldX / dx - 0.5;
-    double gy = worldY / dy;
+    float gx = worldX / dx - 0.5f;
+    float gy = worldY / dy;
 
-    gx = clampDouble(gx, 0.0, n - 1.001);
-    gy = clampDouble(gy, 0.0, (m + 1) - 1.001);
+    gx = clampfloat(gx, 0.0f, n - 1.001f);
+    gy = clampfloat(gy, 0.0f, (m + 1) - 1.001f);
 
     int x0 = static_cast<int>(std::floor(gx));
     int y0 = static_cast<int>(std::floor(gy));
     int x1 = x0 + 1;
     int y1 = y0 + 1;
 
-    double fx = gx - x0;
-    double fy = gy - y0;
+    float fx = gx - x0;
+    float fy = gy - y0;
 
-    double w00 = (1 - fx) * (1 - fy);
-    double w10 = fx * (1 - fy);
-    double w01 = (1 - fx) * fy;
-    double w11 = fx * fy;
+    float w00 = (1 - fx) * (1 - fy);
+    float w10 = fx * (1 - fy);
+    float w01 = (1 - fx) * fy;
+    float w11 = fx * fy;
 
     if (isVerticalFaceSolid(n, m, x0, y0, isSolid))
         w00 = 0;
@@ -106,9 +106,9 @@ __device__ double sampleVerticalVelocity(int n, int m, double worldX, double wor
            (w00 + w10 + w01 + w11);
 }
 
-__global__ void applyHorizontalVelocityAdvection(int n, int m, double *horizontalVelocity, double *verticalVelocity,
-                                                 double *nextHorizontalVelocity, double *nextVerticalVelocity, uint8_t *isSolid,
-                                                 double dx, double dy, double dt) {
+__global__ void applyHorizontalVelocityAdvection(int n, int m, float *horizontalVelocity, float *verticalVelocity,
+                                                 float *nextHorizontalVelocity, float *nextVerticalVelocity, uint8_t *isSolid,
+                                                 float dx, float dy, float dt) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -124,17 +124,17 @@ __global__ void applyHorizontalVelocityAdvection(int n, int m, double *horizonta
     if (isHorizontalFaceSolid(n, m, x, y, isSolid))
         return;
 
-    double posX = x * dx;
-    double posY = (y+0.5) * dy;
+    float posX = x * dx;
+    float posY = (y+0.5f) * dy;
 
     for (int step = 0; step < STEP_COUNT; step++) {
 
-        double u = sampleHorizontalVelocity(n, m, posX, posY, dx, dy, horizontalVelocity, isSolid);
+        float u = sampleHorizontalVelocity(n, m, posX, posY, dx, dy, horizontalVelocity, isSolid);
 
-        double v = sampleVerticalVelocity(n, m, posX, posY, dx, dy, verticalVelocity, isSolid);
+        float v = sampleVerticalVelocity(n, m, posX, posY, dx, dy, verticalVelocity, isSolid);
 
-        double new_posX = posX - u * (dt / STEP_COUNT);
-        double new_posY = posY - v * (dt / STEP_COUNT);
+        float new_posX = posX - u * (dt / STEP_COUNT);
+        float new_posY = posY - v * (dt / STEP_COUNT);
         if (isPositionSolid(n, m, new_posX, new_posY, dx, dy, isSolid))
             break;
         posX = new_posX;
@@ -143,9 +143,9 @@ __global__ void applyHorizontalVelocityAdvection(int n, int m, double *horizonta
     nextHorizontalVelocity[y * (n + 1) + x] = sampleHorizontalVelocity(n, m, posX, posY, dx, dy, horizontalVelocity, isSolid);
 }
 
-__global__ void applyVerticalVelocityAdvection(int n, int m, double *horizontalVelocity, double *verticalVelocity,
-                                               double *nextHorizontalVelocity, double *nextVerticalVelocity, uint8_t *isSolid,
-                                               double dx, double dy, double dt) {
+__global__ void applyVerticalVelocityAdvection(int n, int m, float *horizontalVelocity, float *verticalVelocity,
+                                               float *nextHorizontalVelocity, float *nextVerticalVelocity, uint8_t *isSolid,
+                                               float dx, float dy, float dt) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -161,17 +161,17 @@ __global__ void applyVerticalVelocityAdvection(int n, int m, double *horizontalV
     if (isVerticalFaceSolid(n, m, x, y, isSolid))
         return;
 
-    double posX = (x + 0.5) * dx;
-    double posY = y * dy;
+    float posX = (x + 0.5f) * dx;
+    float posY = y * dy;
 
     for (int step = 0; step < STEP_COUNT; step++) {
 
-        double u = sampleHorizontalVelocity(n, m, posX, posY, dx, dy, horizontalVelocity, isSolid);
+        float u = sampleHorizontalVelocity(n, m, posX, posY, dx, dy, horizontalVelocity, isSolid);
 
-        double v = sampleVerticalVelocity(n, m, posX, posY, dx, dy, verticalVelocity, isSolid);
+        float v = sampleVerticalVelocity(n, m, posX, posY, dx, dy, verticalVelocity, isSolid);
 
-        double new_posX = posX - u * (dt / STEP_COUNT);
-        double new_posY = posY - v * (dt / STEP_COUNT);
+        float new_posX = posX - u * (dt / STEP_COUNT);
+        float new_posY = posY - v * (dt / STEP_COUNT);
         if (isPositionSolid(n, m, new_posX, new_posY, dx, dy, isSolid))
             break;
         posX = new_posX;

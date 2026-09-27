@@ -1,8 +1,8 @@
 #include "cuda/kernels.cuh"
 #include <cstdint>
 
-__global__ void initPressureJacobiIteration(int n, int m, double *inverseNeighbourCount, double *divergenceTerm, double *pressure,
-                                            double *nextPressure, double *divergence, uint8_t *isSolid, double dx) {
+__global__ void initPressureJacobiIteration(int n, int m, float *inverseNeighbourCount, float *divergenceTerm, float *pressure,
+                                            float *nextPressure, float *divergence, uint8_t *isSolid, float dx) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -35,13 +35,13 @@ __global__ void initPressureJacobiIteration(int n, int m, double *inverseNeighbo
     if (isSolid[ind - n] == false)
         count++;
     if (count > 0) {
-        inverseNeighbourCount[ind] = 1.0 / count;
+        inverseNeighbourCount[ind] = 1.0f / count;
         divergenceTerm[ind] = -dx * dx * divergence[ind] * inverseNeighbourCount[ind];
     }
 }
 
-__global__ void applyPressureJacobiIteration(int n, int m, double *inverseNeighbourCount, double *divergenceTerm,
-                                             double *pressure, double *nextPressure, double dx) {
+__global__ void applyPressureJacobiIteration(int n, int m, float *inverseNeighbourCount, float *divergenceTerm,
+                                             float *pressure, float *nextPressure, float dx) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 

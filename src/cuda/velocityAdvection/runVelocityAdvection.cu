@@ -3,23 +3,23 @@
 #include <cstdint>
 #include <cstdio>
 
-void runVelocityAdvection(int n, int m, double *horizontalVelocity, double *verticalVelocity, double *nextHorizontalVelocity,
-                          double *nextVerticalVelocity, uint8_t *isSolid, double dx, double dy, double dt) {
+void runVelocityAdvection(int n, int m, float *horizontalVelocity, float *verticalVelocity, float *nextHorizontalVelocity,
+                          float *nextVerticalVelocity, uint8_t *isSolid, float dx, float dy, float dt) {
     int gridSize = n * m;
     int horizontalGridSize = (n + 1) * m;
     int verticalGridSize = n * (m + 1);
-    double *cuda_horizontalVelocity, *cuda_verticalVelocity, *cuda_nextHorizontalVelocity, *cuda_nextVerticalVelocity;
+    float *cuda_horizontalVelocity, *cuda_verticalVelocity, *cuda_nextHorizontalVelocity, *cuda_nextVerticalVelocity;
     uint8_t *cuda_isSolid;
-    cudaMalloc(&cuda_horizontalVelocity, horizontalGridSize * sizeof(double));
-    cudaMalloc(&cuda_verticalVelocity, verticalGridSize * sizeof(double));
-    cudaMalloc(&cuda_nextHorizontalVelocity, horizontalGridSize * sizeof(double));
-    cudaMalloc(&cuda_nextVerticalVelocity, verticalGridSize * sizeof(double));
+    cudaMalloc(&cuda_horizontalVelocity, horizontalGridSize * sizeof(float));
+    cudaMalloc(&cuda_verticalVelocity, verticalGridSize * sizeof(float));
+    cudaMalloc(&cuda_nextHorizontalVelocity, horizontalGridSize * sizeof(float));
+    cudaMalloc(&cuda_nextVerticalVelocity, verticalGridSize * sizeof(float));
     cudaMalloc(&cuda_isSolid, gridSize * sizeof(uint8_t));
 
-    cudaMemcpy(cuda_horizontalVelocity, horizontalVelocity, horizontalGridSize * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_verticalVelocity, verticalVelocity, verticalGridSize * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_nextHorizontalVelocity, horizontalVelocity, horizontalGridSize * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(cuda_nextVerticalVelocity, verticalVelocity, verticalGridSize * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_horizontalVelocity, horizontalVelocity, horizontalGridSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_verticalVelocity, verticalVelocity, verticalGridSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_nextHorizontalVelocity, horizontalVelocity, horizontalGridSize * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(cuda_nextVerticalVelocity, verticalVelocity, verticalGridSize * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_isSolid, isSolid, gridSize * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
     dim3 block(32, 8);
@@ -30,8 +30,8 @@ void runVelocityAdvection(int n, int m, double *horizontalVelocity, double *vert
 
     cudaDeviceSynchronize();
 
-    cudaMemcpy(nextHorizontalVelocity, cuda_nextHorizontalVelocity, horizontalGridSize * sizeof(double), cudaMemcpyDeviceToHost);
-    cudaMemcpy(nextVerticalVelocity, cuda_nextVerticalVelocity, verticalGridSize * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(nextHorizontalVelocity, cuda_nextHorizontalVelocity, horizontalGridSize * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(nextVerticalVelocity, cuda_nextVerticalVelocity, verticalGridSize * sizeof(float), cudaMemcpyDeviceToHost);
 
     cudaFree(cuda_horizontalVelocity);
     cudaFree(cuda_verticalVelocity);

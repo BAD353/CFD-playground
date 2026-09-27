@@ -150,6 +150,21 @@ bool Simulation::isVerticalFaceSolid(int x, int y) const {
     return false;
 }
 
+
+vector<float> toFloatBuffer(const Field2D<double> &field) {
+    vector<float> out(field.width() * field.height());
+    const double *src = field.data();
+    std::transform(src, src + out.size(), out.begin(),
+                   [](double v) { return static_cast<float>(v); });
+    return out;
+}
+
+void fromFloatBuffer(const vector<float> &src, Field2D<double> &field) {
+    double *dst = field.data();
+    std::transform(src.begin(), src.end(), dst,
+                   [](float v) { return static_cast<double>(v); });
+}
+
 void Simulation::update(double dt, bool printDebug) {
     const auto initial = chrono::high_resolution_clock::now();
     m_dt = dt;
@@ -180,11 +195,16 @@ void Simulation::update(double dt, bool printDebug) {
 
     const auto after_viscosity = chrono::high_resolution_clock::now();
 
-    // Field2D<double> cuda_nextHorizontalVelocity = m_nextHorizontalVelocity;
-    // Field2D<double> cuda_nextVerticalVelocity = m_nextVerticalVelocity;
+    vector<float> cuda_horizontalVelocity = toFloatBuffer(m_horizontalVelocity);
+    vector<float> cuda_verticalVelocity = toFloatBuffer(m_verticalVelocity);
+    vector<float> cuda_nextHorizontalVelocity = cuda_horizontalVelocity;
+    vector<float> cuda_nextVerticalVelocity = cuda_verticalVelocity;
 
-    runVelocityAdvection(m_grid.width(), m_grid.height(), m_horizontalVelocity.data(), m_verticalVelocity.data(), 
-    m_nextHorizontalVelocity.data(), m_nextVerticalVelocity.data(), solid.data(), m_grid.dx(), m_grid.dy(), dt);
+    runVelocityAdvection(m_grid.width(), m_grid.height(), cuda_horizontalVelocity.data(), cuda_verticalVelocity.data(), 
+    cuda_nextHorizontalVelocity.data(), cuda_nextVerticalVelocity.data(), solid.data(), m_grid.dx(), m_grid.dy(), dt);
+
+    fromFloatBuffer(cuda_nextHorizontalVelocity, m_nextHorizontalVelocity);
+    fromFloatBuffer(cuda_nextVerticalVelocity, m_nextVerticalVelocity);
 
     // applyAdvection(dt);
     std::swap(m_nextHorizontalVelocity, m_horizontalVelocity);
@@ -218,11 +238,15 @@ void Simulation::update(double dt, bool printDebug) {
 
     initZeroPressure();
     
-    Field2D<double> cuda_pressure = m_pressure;
 
     const auto before_cuda_pressure = chrono::high_resolution_clock::now();
 
-    runJacobiPressureSolve(m_grid.width(), m_grid.height(), m_pressure.data(), m_divergence.data(), solid.data(), 1500, m_grid.dx());
+    vector<float> cuda_pressure = toFloatBuffer(m_pressure);
+    vector<float> cuda_divergence = toFloatBuffer(m_divergence);
+
+    runJacobiPressureSolve(m_grid.width(), m_grid.height(), cuda_pressure.data(), cuda_divergence.data(), solid.data(), 1500, m_grid.dx());
+
+    fromFloatBuffer(cuda_pressure, m_pressure);
 
     const auto after_cuda_pressure = chrono::high_resolution_clock::now();
 

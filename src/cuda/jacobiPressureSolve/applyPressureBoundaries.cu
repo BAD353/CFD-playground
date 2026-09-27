@@ -1,7 +1,7 @@
 #include <cstdint>
 #include "cuda/kernels.cuh"
 
-__global__ void applyPressureBoundaries(int n, int m, double *pressure, uint8_t *isSolid) {
+__global__ void applyPressureBoundaries(int n, int m, float *pressure, uint8_t *isSolid) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
