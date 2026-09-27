@@ -12,6 +12,10 @@ void runJacobiPressureSolve(int n, int m, double *pressure, double *divergence, 
     cudaMalloc(&cuda_divergence, gridSize * sizeof(double));
     cudaMalloc(&cuda_isSolid, gridSize * sizeof(uint8_t));
 
+    double *cuda_inverseNeighbourCount, *cuda_divergenceTerm;
+    cudaMalloc(&cuda_inverseNeighbourCount, gridSize * sizeof(double));
+    cudaMalloc(&cuda_divergenceTerm, gridSize * sizeof(double));
+
     cudaMemcpy(cuda_pressure, pressure, gridSize * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_nextPressure, pressure, gridSize * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(cuda_divergence, divergence, gridSize * sizeof(double), cudaMemcpyHostToDevice);
@@ -20,8 +24,10 @@ void runJacobiPressureSolve(int n, int m, double *pressure, double *divergence, 
     dim3 block(32,8);
     dim3 grid((n + block.x - 1) / block.x, (m + block.y - 1) / block.y);
 
+    initPressureJacobiIteration<<<grid, block>>>(n, m, cuda_inverseNeighbourCount, cuda_divergenceTerm, cuda_pressure, cuda_nextPressure,  cuda_divergence, cuda_isSolid, dx);
+
     for (int it = 0; it < iterations; it++) {
-        applyPressureJacobiIteration<<<grid, block>>>(n, m, cuda_pressure, cuda_divergence, cuda_isSolid, cuda_nextPressure, dx);
+        applyPressureJacobiIteration<<<grid, block>>>(n, m, cuda_inverseNeighbourCount, cuda_divergenceTerm, cuda_pressure, cuda_nextPressure, dx);
         std::swap(cuda_pressure, cuda_nextPressure);
         applyPressureBoundaries<<<grid, block>>>(n, m, cuda_pressure, cuda_isSolid);
     }
@@ -35,6 +41,8 @@ void runJacobiPressureSolve(int n, int m, double *pressure, double *divergence, 
     cudaFree(cuda_divergence);
     cudaFree(cuda_isSolid);
     cudaFree(cuda_nextPressure);
+    cudaFree(cuda_inverseNeighbourCount);
+    cudaFree(cuda_divergenceTerm);
 
     // cudaError_t e1 = cudaGetLastError();
     // cudaError_t e2 = cudaDeviceSynchronize();

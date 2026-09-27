@@ -1,39 +1,58 @@
 #include "cuda/kernels.cuh"
 #include <cstdint>
 
-__global__ void applyPressureJacobiIteration(int n, int m, double *pressure, double *divergence, uint8_t *isSolid,
-                                             double *nextPressure, double dx) {
+__global__ void initPressureJacobiIteration(int n, int m, double *inverseNeighbourCount, double *divergenceTerm, double *pressure,
+                                            double *nextPressure, double *divergence, uint8_t *isSolid, double dx) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (x < 1) return;
-    if (y < 1) return;
-    if (x >= n-1) return;
-    if (y >= m-1) return;
-    if (isSolid[y * n + x] == true) {
-        nextPressure[y * n + x] = 0;
+    if (x < 1)
+        return;
+    if (y < 1)
+        return;
+    if (x >= n - 1)
+        return;
+    if (y >= m - 1)
+        return;
+
+    int ind = y * n + x;
+
+    inverseNeighbourCount[ind] = 0;
+    divergenceTerm[ind] = 0;
+
+    if (isSolid[ind] == true) {
+        pressure[ind] = 0;
+        nextPressure[ind] = 0;
         return;
     }
     int count = 0;
-    double sum = 0;
-    if (isSolid[y * n + (x + 1)] == false) {
-        sum += pressure[y * n + (x + 1)];
+    if (isSolid[ind + 1] == false)
         count++;
-    }
-    if (isSolid[y * n + (x - 1)] == false) {
-        sum += pressure[y * n + (x - 1)];
+    if (isSolid[ind - 1] == false)
         count++;
-    }
-    if (isSolid[(y + 1) * n + x] == false) {
-        sum += pressure[(y + 1) * n + x];
+    if (isSolid[ind + n] == false)
         count++;
-    }
-    if (isSolid[(y - 1) * n + x] == false) {
-        sum += pressure[(y - 1) * n + x];
+    if (isSolid[ind - n] == false)
         count++;
+    if (count > 0) {
+        inverseNeighbourCount[ind] = 1.0 / count;
+        divergenceTerm[ind] = -dx * dx * divergence[ind] * inverseNeighbourCount[ind];
     }
-    if (count == 0)
-        nextPressure[y * n + x] = 0;
-    else
-        nextPressure[y * n + x] = (sum - dx * dx * divergence[y * n + x]) / count;
+}
+
+__global__ void applyPressureJacobiIteration(int n, int m, double *inverseNeighbourCount, double *divergenceTerm,
+                                             double *pressure, double *nextPressure, double dx) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (x < 1)
+        return;
+    if (y < 1)
+        return;
+    if (x >= n - 1)
+        return;
+    if (y >= m - 1)
+        return;
+    int i =  y * n + x;
+    nextPressure[i] = (pressure[i+1] + pressure[i-1] + pressure[i+n] + pressure[i-n]) * inverseNeighbourCount[i] + divergenceTerm[i];
 }
