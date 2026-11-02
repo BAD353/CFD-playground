@@ -150,15 +150,15 @@ void ScalarFieldRenderer::drawCellType(sf::RenderWindow &window, const Field2D<C
 
 void ScalarFieldRenderer::drawVelocityMagnitude(sf::RenderWindow &window, const Field2D<double> &horizontalVelocity,
                                                 const Field2D<double> &verticalVelocity) {
-    double maxLength = 0;
-    for (int y = 0; y < horizontalVelocity.height(); y++) {
-        for (int x = 0; x < verticalVelocity.width(); x++) {
-            double u = horizontalVelocity(x, y);
-            double v = verticalVelocity(x, y);
-            double length = sqrt(u * u + v * v);
-            maxLength = max(maxLength, length);
-        }
-    }
+    double maxLength = 15;
+    // for (int y = 0; y < horizontalVelocity.height(); y++) {
+    //     for (int x = 0; x < verticalVelocity.width(); x++) {
+    //         double u = horizontalVelocity(x, y);
+    //         double v = verticalVelocity(x, y);
+    //         double length = sqrt(u * u + v * v);
+    //         maxLength = max(maxLength, length);
+    //     }
+    // }
     for (int y = 0; y < horizontalVelocity.height(); y++) {
         for (int x = 0; x < verticalVelocity.width(); x++) {
             double u = horizontalVelocity(x, y);

@@ -23,7 +23,7 @@ enum class DrawingMode { VelocityDye, Obstacle, Count };
 int main() {
     constexpr int gridWidth = 600;
     constexpr int gridHeight = 300;
-    constexpr double cellSize = 2.0f; //in pixels
+    constexpr double cellSize = 3.0f; // in pixels
     constexpr double dt = 0.001;
 
     Grid grid(gridWidth, gridHeight, 0.01, 0.01); // 1cm x 1cm cells
