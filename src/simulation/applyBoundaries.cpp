@@ -9,10 +9,16 @@ void Simulation::applyVelocityBoundary() {
     }
 
     for (int x = 0; x < m_verticalVelocity.width(); x++) {
-         m_verticalVelocity(x, 0) =
-            m_verticalVelocity(x, 1);
-        m_verticalVelocity(x, m_verticalVelocity.height() - 1) =
-            m_verticalVelocity(x, m_verticalVelocity.height() - 2);
+        //  m_verticalVelocity(x, 0) =
+        //     m_verticalVelocity(x, 1);
+        // m_verticalVelocity(x, m_verticalVelocity.height() - 1) =
+        //     m_verticalVelocity(x, m_verticalVelocity.height() - 2);
+
+
+        // FREE SLIP:
+        m_verticalVelocity(x, 0) = 0;
+        m_verticalVelocity(x, m_verticalVelocity.height() - 1) = 0;
+
     }
 
     for (int y = 0; y < m_horizontalVelocity.height(); y++) {
@@ -33,7 +39,8 @@ void Simulation::applyVelocityBoundary() {
 void Simulation::applyPressureBoundary() {
     for (int y = 0; y < m_pressure.height(); y++) {
         m_pressure(0, y) = m_pressure(1, y);
-        m_pressure(m_pressure.width() - 1, y) = m_pressure(m_pressure.width() - 2, y);
+        // m_pressure(m_pressure.width() - 1, y) = m_pressure(m_pressure.width() - 2, y);
+        m_pressure(m_pressure.width() - 1, y) = 0;
     }
 
     for (int x = 0; x < m_pressure.width(); x++) {

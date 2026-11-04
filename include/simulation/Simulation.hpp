@@ -65,6 +65,8 @@ class Simulation {
 
     bool isPositionSolid(Vec2 pos) const;
 
+    const void debugPrintFlow() const;
+
   private:
     Grid m_grid;
     double m_alpha;

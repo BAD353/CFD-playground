@@ -236,7 +236,7 @@ void Simulation::update(double dt, bool printDebug) {
     compute_divergence();
     // cout << "before: " << find_max_divergence() << endl;   
 
-    initZeroPressure();
+    // initZeroPressure();
     
 
     const auto before_cuda_pressure = chrono::high_resolution_clock::now();
@@ -244,7 +244,7 @@ void Simulation::update(double dt, bool printDebug) {
     vector<float> cuda_pressure = toFloatBuffer(m_pressure);
     vector<float> cuda_divergence = toFloatBuffer(m_divergence);
 
-    runJacobiPressureSolve(m_grid.width(), m_grid.height(), cuda_pressure.data(), cuda_divergence.data(), solid.data(), 1500, m_grid.dx());
+    runJacobiPressureSolve(m_grid.width(), m_grid.height(), cuda_pressure.data(), cuda_divergence.data(), solid.data(), 5000, m_grid.dx());
 
     fromFloatBuffer(cuda_pressure, m_pressure);
 
@@ -321,3 +321,22 @@ Vec2 Simulation::computeForce() const {
 
     return totalForce * airDensity / m_dt;
 }
+
+void const Simulation::debugPrintFlow() const {
+    double totalInflow = 0.0; 
+    double totalOutflow = 0.0; 
+    for (int i = 0; i < m_horizontalVelocity.height(); i++) {
+        totalInflow += m_horizontalVelocity(0,i);
+        totalOutflow += m_horizontalVelocity(m_horizontalVelocity.width()-1,i);
+    }
+    double netOutflowUp = 0.0; 
+    double netOutflowDown = 0.0;
+    for (int i = 0; i < m_verticalVelocity.width(); i++) {
+        netOutflowUp -= m_verticalVelocity(i,0);
+        netOutflowDown += m_verticalVelocity(i,m_verticalVelocity.height()-1);
+    }
+    cout << "in from left: " << totalInflow << endl;
+    cout << "out from right: " << totalOutflow << endl;
+    cout << "out from up: " << netOutflowUp << endl;
+    cout << "out from down: " << netOutflowDown << endl;
+};

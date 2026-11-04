@@ -21,8 +21,8 @@ enum class RenderMode {
 enum class DrawingMode { VelocityDye, Obstacle, Count };
 
 int main() {
-    constexpr int gridWidth = 600;
-    constexpr int gridHeight = 300;
+    constexpr int gridWidth = 400;
+    constexpr int gridHeight = 200;
     constexpr double cellSize = 3.0f; // in pixels
     constexpr double dt = 0.001;
 
@@ -31,7 +31,7 @@ int main() {
     Simulation simulation(grid);
     simulation.initializeVelocity();
 
-    double chordWidthRatio = 0.5;
+    double chordWidthRatio = 0.6;
 
     double angleOfAttack = 0;
     constexpr double airfoilCenterX = 0.4 * gridWidth;
@@ -240,6 +240,7 @@ int main() {
             cout << "Lift: " << lift << endl;
             cout << "Drag: " << drag << endl;
             cout << "Lift/Drag ratio: " << lift / drag << endl;
+            simulation.debugPrintFlow();
         }
         frameCount++;
     }

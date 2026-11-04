@@ -11,7 +11,7 @@ __global__ void applyPressureBoundaries(int n, int m, float *pressure, uint8_t *
     if (x == 0)
         pressure[y * n + 0] = pressure[y * n + 1];
     if (x == n - 1)
-        pressure[y * n + (n - 1)] = pressure[y * n + (n - 2)];
+        pressure[y * n + (n - 1)] = 0;
 
     if (y == 0)
         pressure[0 * n + x] = pressure[1 * n + x];
